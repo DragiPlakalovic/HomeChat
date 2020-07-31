@@ -2,10 +2,9 @@ import javax.swing.*;
 import java.awt.event.*;
 import java.awt.*;
 import common.*;
-import client.*;
 
-public class ClientGUI extends JFrame implements ActionListener, ChatIF {
-	// Variables that represent various components of the client
+public class ServerGUI extends JFrame implements ActionListener, ChatIF {
+	// Variables that represent various components of the server
 	private JFrame mainProgram;
 	
 	// Menu bar and associated menus
@@ -13,10 +12,10 @@ public class ClientGUI extends JFrame implements ActionListener, ChatIF {
 	private JMenu file;
 	private JMenu help;
 	
-	// Menu items for the client
+	// Menu items for the server
 	private JMenuItem about;
-	private JMenuItem logIn;
-	private JMenuItem logOut;
+	private JMenuItem listenForConnections;
+	private JMenuItem stopListening;
 	private JMenuItem exitProgram;
 	
 	// Variables for contact dialoog and log in
@@ -33,8 +32,8 @@ public class ClientGUI extends JFrame implements ActionListener, ChatIF {
 	private JTextArea chatBox;
 	private JLabel connectionStatus, date;
 
-	// Create an instance of ChatClient and default port
-	ChatClient chat;
+	// Create an instance of EchoServer and default port
+	EchoServer server;
 	static int DEFAULT_PORT = 5555;
 
 	// Function for displaying messages
@@ -60,12 +59,12 @@ public class ClientGUI extends JFrame implements ActionListener, ChatIF {
     		
   	}
 	
-	public ClientGUI(String host, int port, String id) {
-		// Start client
-		chat = new ChatClient(host, port, id, this);
+	public ServerGUI(int port) {
+		// Start server
+		server = new EchoServer(port);
 
 		/* Name the program's frame and set its size */
-		mainProgram = new JFrame("SimpleChatClient");
+		mainProgram = new JFrame("SimpleChatServer");
 		mainProgram.setLayout(null);
 		mainProgram.setSize(630, 500);
 		
@@ -109,22 +108,22 @@ public class ClientGUI extends JFrame implements ActionListener, ChatIF {
 		help.add(about);
 		
 		// Add options for logging in, logging out and closing the program
-		logIn = new JMenuItem("Login");
-		logOut = new JMenuItem("Logout");
+		listenForConnections = new JMenuItem("Start Listening");
+		stopListening = new JMenuItem("Stop Listening");
 		exitProgram = new JMenuItem("Exit");
-		file.add(logIn);
-		file.add(logOut);
+		file.add(listenForConnections);
+		file.add(stopListening);
 		file.add(exitProgram);
 		
 		// Create a dialog box for contact information and version history
 		contactInfo = new JDialog(mainProgram);
-        contactInfo.setTitle("About SimpleChatGUI Client.");
+        contactInfo.setTitle("About SimpleChatGUI Server.");
         contactInfo.setSize(new Dimension(850, 100));
 		
 		// Add elements to the dialog (description and button)
 		JPanel pan=new JPanel();
 		pan.setLayout(new FlowLayout());
-		pan.add(new JLabel("Simple Chat Client GUI is licensed under MIT license."));
+		pan.add(new JLabel("Simple Chat Server GUI is licensed under MIT license."));
 		pan.add(new JLabel("Furthermore, OCSF component of Simple Chat was made at University of Ottawa"));
 		
 		// Add action listener to the close button
@@ -142,8 +141,8 @@ public class ClientGUI extends JFrame implements ActionListener, ChatIF {
 			
 		// Add action listeners to the menu items
 		about.addActionListener(this);
-		logIn.addActionListener(this);
-		logOut.addActionListener(this);
+		listenForConnections.addActionListener(this);
+		stopListening.addActionListener(this);
 		exitProgram.addActionListener(this);
 
 		// Add menus to the menu bar. Then, add the menu and panel bar to the frame
@@ -152,7 +151,7 @@ public class ClientGUI extends JFrame implements ActionListener, ChatIF {
 		mainProgram.setJMenuBar(mb);
 		//mainProgram.add(panel);
 		
-		// Operations for closing the client and its display
+		// Operations for closing the server and its display
 		mainProgram.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		mainProgram.setVisible(true);
 	}
@@ -173,66 +172,41 @@ public class ClientGUI extends JFrame implements ActionListener, ChatIF {
 		if (e.getSource()==sendButton) {
 			// Send the message to the server
 			String out = message.getText();
-			chat.handleMessageFromClientUI(out);
+			server.handleInputFromServerConsole(out);
 			// Clean the message box and display the message into the chat box
 			message.setText(null);
 			chatBox.append(out+"\n");
 		}
-		if (e.getSource()==logIn) {
-			// Send command for login
-			chat.handleMessageFromClientUI("#login");
+		if (e.getSource()==listenForConnections) {
+			// Send command for listening
+			server.handleInputFromServerConsole("#start");
 			// Change connection status
-			connectionStatus.setText("You're logged in! To logout, go to File->Logout");
+			connectionStatus.setText("You're listening! Go to File->stop to stop.");
 		}
-		if (e.getSource()==logOut) {
-			// Log off the user
-			chat.handleMessageFromClientUI("#logoff");
+		if (e.getSource()==stopListening) {
+			// Stop listening for new connections
+			server.handleInputFromServerConsole("#stop");
 			// Change connection status
-			connectionStatus.setText("You're not logged in! To login, go to File->Login");
+			connectionStatus.setText("You're not listening! To listen, go to File->listen");
 		}
 	}
 	
 	public static void main(String[] args) {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-				String clientID = "";
-				String host = "";
-				int port = 0;  //The port number
+				int port = 0; //Port to listen on
 
-				try
-				{
-					// Given that only clientID argument is mandatory, check if user entered additional arguments
-					if (args.length == 3) {
-						clientID = args[0];
-						host = args[1];
-						port = Integer.parseInt(args[2]);
-
-					} 
-					else if (args.length == 2) {
-						// Determine the type of argument. Assume that second argument is port argument
-						clientID = args[0];
-						port = Integer.parseInt(args[1]);
-						host = "localhost";
-					}
-					else
-				      		clientID = args[0];
-						host = "localhost";
-						port = DEFAULT_PORT;
-				    }
-				    catch(ArrayIndexOutOfBoundsException e)
+				    try
 				    {
-				      System.out.println("ERROR - No login ID specified.  Connection aborted.");
-					System.exit(1);
+				      port = Integer.parseInt(args[0]); //Get port from command line
 				    }
-					// The assumption was wrong.
-				    	catch (NumberFormatException e) 
-				    	{
-						// Use the default port
-						port = DEFAULT_PORT;
-						host = args[1];
-					}
-				new ClientGUI(host,port, clientID);
-			}
+				    catch(Throwable t)
+				    {
+				      port = DEFAULT_PORT; //Set port to 5555
+				    }
+					
+				    ServerGUI serv = new ServerGUI(port);
+				  }
 		});
 	}
 }
