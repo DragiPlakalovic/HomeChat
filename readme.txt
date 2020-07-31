@@ -6,3 +6,5 @@ This software is based on Object Server-Client Infrastructure (OCSF) made by Uni
 This source code is licensed under MIT License and everybody may use it.
 
 To learn more about my project, please consult project's wiki page. Thank you once again.
+
+My code is located in /code/simplechat1
